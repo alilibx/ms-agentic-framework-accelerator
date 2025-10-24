@@ -1,0 +1,26 @@
+{
+  "name": "agentic-ms",
+  "version": "1.0.0",
+  "description": "Microsoft Agent Framework Weather Agent",
+  "main": "run_devui.py",
+  "scripts": {
+    "agent": "./start_agent.sh",
+    "stop": "pkill -f 'python run_devui.py' && pkill -f 'uvicorn' && rm -f .agent.pid",
+    "restart": "bun run stop && sleep 2 && bun run agent",
+    "status": "lsof -i :8080 || echo 'No agent running on port 8080'",
+    "workflow": "python workflow_runner.py",
+    "demo": "python workflow_runner.py"
+  },
+  "keywords": [
+    "agent",
+    "weather",
+    "microsoft",
+    "ai",
+    "azure"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "python": ">=3.10"
+  }
+}
