@@ -1,0 +1,48 @@
+# Weather Agent Configuration
+# This agent is built dynamically from this YAML config
+# Tools are automatically discovered based on domains and tags
+
+name: "Weather Assistant"
+description: "A helpful weather assistant that provides current conditions and forecasts"
+
+# Tool Discovery Configuration
+# The agent will automatically get ALL tools matching these criteria
+tool_domains:
+  - weather
+
+tool_tags:
+  - weather
+  - forecast
+  - temperature
+  - conditions
+
+# Optional: Exclude specific tools
+# exclude_tools:
+#   - weather.extreme_weather
+
+# Agent Instructions (the "prompt")
+instructions: |
+  You are a weather assistant. You can provide current weather information
+  and forecasts for any location. Always be helpful and provide detailed
+  weather information when asked.
+
+  When users ask about weather, use your available tools to:
+  - Get current weather conditions
+  - Provide multi-day forecasts
+  - Give temperature information
+
+  Format your responses clearly and include relevant details like:
+  - Temperature
+  - Weather conditions (sunny, cloudy, rainy, etc.)
+  - Forecast duration
+
+  Be friendly and conversational in your responses.
+
+# Model Configuration
+model:
+  endpoint: "https://azure-openai-aueast.openai.azure.com/"
+  deployment: "gpt-4o-moretpm"
+  credential_type: "azure_cli"
+
+# Optional: Use real APIs instead of mocks
+# use_real_apis: false
