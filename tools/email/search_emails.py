@@ -3,14 +3,26 @@
 from typing import Annotated
 from datetime import datetime, timedelta
 import random
+import os
 from tools._decorators import tool
+
+# Try to import Gmail utilities
+try:
+    from .gmail_utils import get_gmail_client, is_gmail_configured
+    GMAIL_AVAILABLE = True
+except ImportError:
+    GMAIL_AVAILABLE = False
+    is_gmail_configured = lambda: False
+
+# Check if we should use real Gmail or mock
+USE_REAL_GMAIL = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
 
 
 @tool(
     domain="email",
     description="Search emails by keyword, sender, or subject",
     tags=["email", "search", "find", "query"],
-    mock=True,
+    mock=not USE_REAL_GMAIL,
 )
 def search_emails(
     query: Annotated[str, "Search query (keywords, sender, or subject)"],
@@ -18,8 +30,7 @@ def search_emails(
 ) -> str:
     """Search emails by keyword, sender, or subject.
 
-    This is a mock implementation with sample search results.
-    In production, this would perform full-text search on email data.
+    Supports both Gmail API (when configured) and mock mode.
 
     Args:
         query: Search query string
@@ -38,6 +49,55 @@ def search_emails(
            📝 Subject: **Project** Update Required
            ⏰ Received: 2025-10-24 14:30
         ..."
+    """
+    # Try real Gmail if configured
+    if USE_REAL_GMAIL and is_gmail_configured():
+        try:
+            gmail = get_gmail_client()
+            emails = gmail.search_emails(query=query, search_in=search_in, limit=20)
+
+            search_scope = f"in {search_in}" if search_in != "all" else "everywhere"
+            header = f"🔍 **Search Results for '{query}' {search_scope}** (via Gmail)\n"
+
+            if not emails:
+                return header + "\n❌ No emails found matching your query."
+
+            result_text = [header, f"\nFound {len(emails)} matching {'email' if len(emails) == 1 else 'emails'}:\n"]
+
+            for i, email in enumerate(emails, 1):
+                # Highlight query in subject
+                highlighted_subject = email["subject"]
+                if query.lower() in email["subject"].lower():
+                    highlighted_subject = email["subject"].replace(
+                        query, f"**{query}**"
+                    )
+
+                result_text.append(f"""
+{i}. 📧 **From:** {email['from']}
+   📝 **Subject:** {highlighted_subject}
+   💬 **Preview:** {email['preview']}
+   ⏰ **Received:** {email['received']}
+                """.strip())
+
+            return "\n\n".join(result_text)
+
+        except Exception as e:
+            # Fall back to mock if Gmail fails
+            return f"⚠️ **Gmail error (using mock):** {str(e)}\n\n" + _search_emails_mock(query, search_in)
+
+    # Mock implementation
+    return _search_emails_mock(query, search_in)
+
+
+def _search_emails_mock(query: str, search_in: str = "all") -> str:
+    """Mock implementation of email search.
+
+    Args:
+        query: Search query string
+        search_in: Where to search
+
+    Returns:
+        Formatted mock search results
     """
     # Mock search results based on query
     search_results = {

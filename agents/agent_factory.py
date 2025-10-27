@@ -12,8 +12,21 @@ from tools import ToolRegistry, ToolLoader
 from pathlib import Path
 import yaml
 import logging
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Try to import OpenAI chat client (may not be available in all versions)
+try:
+    from agent_framework.openai import OpenAIChatClient
+    OPENAI_CLIENT_AVAILABLE = True
+except ImportError:
+    OPENAI_CLIENT_AVAILABLE = False
+    logger.warning("OpenAIChatClient not available - OpenRouter/OpenAI support disabled")
 
 
 class AgentFactory:
@@ -166,31 +179,125 @@ class AgentFactory:
 
         return tool_functions
 
-    def _build_chat_client(self, config: dict) -> AzureOpenAIChatClient:
-        """Build the Azure OpenAI chat client from config.
+    def _build_chat_client(self, config: dict):
+        """Build the chat client from config.
+
+        Supports multiple providers:
+        - azure: Azure OpenAI (default)
+        - openrouter: OpenRouter API
+        - openai: Direct OpenAI API
 
         Args:
             config: Parsed YAML configuration
 
         Returns:
-            Configured AzureOpenAIChatClient
+            Configured chat client
         """
         model_config = config.get("model", {})
+        provider = model_config.get("provider", "azure").lower()
 
-        # Build credential based on config
+        logger.info(f"Building chat client for provider: {provider}")
+
+        if provider == "azure":
+            return self._build_azure_client(model_config)
+        elif provider == "openrouter":
+            return self._build_openrouter_client(model_config)
+        elif provider == "openai":
+            return self._build_openai_client(model_config)
+        else:
+            raise ValueError(f"Unsupported provider: {provider}")
+
+    def _build_azure_client(self, model_config: dict) -> AzureOpenAIChatClient:
+        """Build Azure OpenAI chat client.
+
+        Args:
+            model_config: Model configuration from YAML
+
+        Returns:
+            Configured AzureOpenAIChatClient
+        """
         credential_type = model_config.get("credential_type", "azure_cli")
 
         if credential_type == "azure_cli":
             credential = AzureCliCredential()
+        elif credential_type == "api_key":
+            api_key = os.getenv("AZURE_OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("AZURE_OPENAI_API_KEY not found in environment")
+            # Note: agent_framework may need to support api_key auth
+            credential = api_key
         else:
             raise ValueError(f"Unsupported credential type: {credential_type}")
 
-        # Create client
         client = AzureOpenAIChatClient(
-            endpoint=model_config.get("endpoint"),
-            deployment_name=model_config.get("deployment"),
+            endpoint=model_config.get("endpoint", os.getenv("AZURE_OPENAI_ENDPOINT")),
+            deployment_name=model_config.get("deployment", os.getenv("AZURE_OPENAI_DEPLOYMENT")),
             credential=credential,
         )
+
+        return client
+
+    def _build_openrouter_client(self, model_config: dict):
+        """Build OpenRouter chat client.
+
+        Args:
+            model_config: Model configuration from YAML
+
+        Returns:
+            Configured OpenRouter-compatible client
+        """
+        if not OPENAI_CLIENT_AVAILABLE:
+            raise ImportError(
+                "OpenAIChatClient not available in agent_framework. "
+                "Please upgrade: pip install --upgrade --pre agent-framework"
+            )
+
+        api_key = model_config.get("api_key") or os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OPENROUTER_API_KEY not found in environment or config")
+
+        base_url = model_config.get("base_url", os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"))
+        model_id = model_config.get("model", os.getenv("OPENROUTER_MODEL", "openai/gpt-4-turbo"))
+
+        # Create OpenAI chat client pointing to OpenRouter
+        client = OpenAIChatClient(
+            model_id=model_id,
+            api_key=api_key,
+            base_url=base_url,
+        )
+
+        logger.info(f"OpenRouter client created with model: {model_id}")
+
+        return client
+
+    def _build_openai_client(self, model_config: dict):
+        """Build direct OpenAI chat client.
+
+        Args:
+            model_config: Model configuration from YAML
+
+        Returns:
+            Configured OpenAI client
+        """
+        if not OPENAI_CLIENT_AVAILABLE:
+            raise ImportError(
+                "OpenAIChatClient not available in agent_framework. "
+                "Please upgrade: pip install --upgrade --pre agent-framework"
+            )
+
+        api_key = model_config.get("api_key") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not found in environment or config")
+
+        model_id = model_config.get("model", os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview"))
+
+        # Create OpenAI chat client
+        client = OpenAIChatClient(
+            model_id=model_id,
+            api_key=api_key,
+        )
+
+        logger.info(f"OpenAI client created with model: {model_id}")
 
         return client
 
