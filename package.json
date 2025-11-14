@@ -4,6 +4,7 @@
   "description": "Multi-Agent System",
   "main": "run_devui.py",
   "scripts": {
+    "dev": "./start_agent.sh",
     "agent": "./start_agent.sh",
     "start": "./start_agent.sh",
     "stop": "pkill -f 'python run_devui.py' && pkill -f 'uvicorn' && rm -f .agent.pid || echo 'No agent running'",
