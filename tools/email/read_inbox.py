@@ -3,14 +3,26 @@
 from typing import Annotated
 from datetime import datetime, timedelta
 import random
+import os
 from tools._decorators import tool
+
+# Try to import Gmail utilities
+try:
+    from .gmail_utils import get_gmail_client, is_gmail_configured
+    GMAIL_AVAILABLE = True
+except ImportError:
+    GMAIL_AVAILABLE = False
+    is_gmail_configured = lambda: False
+
+# Check if we should use real Gmail or mock
+USE_REAL_GMAIL = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
 
 
 @tool(
     domain="email",
     description="Read recent emails from inbox",
     tags=["email", "inbox", "read", "messages"],
-    mock=True,
+    mock=not USE_REAL_GMAIL,
 )
 def read_inbox(
     limit: Annotated[int, "Maximum number of emails to retrieve"] = 5,
@@ -18,8 +30,7 @@ def read_inbox(
 ) -> str:
     """Read recent emails from the inbox.
 
-    This is a mock implementation with sample email data.
-    In production, this would connect to email service APIs (Gmail, Outlook, etc.).
+    Supports both Gmail API (when configured) and mock mode.
 
     Args:
         limit: Maximum number of emails to retrieve (default: 5, max: 20)
@@ -40,6 +51,48 @@ def read_inbox(
            📝 Subject: New notification from Slack
            ⏰ Received: 2025-10-24 13:15
         ..."
+    """
+    # Try real Gmail if configured
+    if USE_REAL_GMAIL and is_gmail_configured():
+        try:
+            gmail = get_gmail_client()
+            emails = gmail.read_inbox(limit=limit, filter_unread=filter_unread)
+
+            if not emails:
+                return "📭 **No emails found** matching your criteria."
+
+            header = "📬 **Unread Messages** (via Gmail)" if filter_unread else "📬 **Your Inbox** (via Gmail)"
+            result = [f"{header} ({len(emails)} {'message' if len(emails) == 1 else 'messages'})\n"]
+
+            for i, email in enumerate(emails, 1):
+                status = "🟢" if email['unread'] else "⚪"
+
+                result.append(f"""
+{i}. {status} **From:** {email['from']}
+   📝 **Subject:** {email['subject']}
+   💬 **Preview:** {email['preview']}
+   ⏰ **Received:** {email['received']}
+                """.strip())
+
+            return "\n\n".join(result)
+
+        except Exception as e:
+            # Fall back to mock if Gmail fails
+            return f"⚠️ **Gmail error (using mock):** {str(e)}\n\n" + _read_inbox_mock(limit, filter_unread)
+
+    # Mock implementation
+    return _read_inbox_mock(limit, filter_unread)
+
+
+def _read_inbox_mock(limit: int = 5, filter_unread: bool = False) -> str:
+    """Mock implementation of inbox reading.
+
+    Args:
+        limit: Maximum number of emails to retrieve
+        filter_unread: If True, show only unread emails
+
+    Returns:
+        Formatted mock inbox data
     """
     # Mock email data
     sample_emails = [

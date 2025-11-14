@@ -1,5 +1,46 @@
+# Environment variables
 .env
+
+# Python cache
 __pycache__/*
 **/__pycache__/*
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.virtualenv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Agent process
+.agent.pid
+
+# Gmail credentials (sensitive)
 credentials.json
 token.json
+calendar_token.json
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg

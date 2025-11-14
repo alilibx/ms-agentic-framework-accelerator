@@ -24,12 +24,14 @@ A dynamic, plugin-based multi-agent system built on Microsoft's Agent Framework 
 - **Sequential Workflows**: Chain agents in sequence for complex workflows
 - **Parallel Execution**: Run multiple agents concurrently with fan-out/fan-in patterns
 - **Custom Aggregators**: Combine parallel results with custom logic
-- **Azure OpenAI Support**: Production-ready integration with Azure services
+- **Multi-Provider LLM Support**: Azure OpenAI, OpenRouter, and direct OpenAI with automatic fallback
 
 ### Developer Experience
 - **DevUI Integration**: Built-in web interface for testing and debugging
 - **Comprehensive Logging**: Detailed logs for tool discovery and agent creation
 - **Mock & Real APIs**: Easy toggle between mock data and real API integrations
+- **Gmail Integration**: Full OAuth2 support for real email operations
+- **OpenRouter Support**: Access to 100+ LLM models through a single API
 - **Type Safety**: Full type hints and annotations throughout
 
 ## 📋 Table of Contents
@@ -52,8 +54,13 @@ A dynamic, plugin-based multi-agent system built on Microsoft's Agent Framework 
 ### Prerequisites
 
 - Python 3.11 or higher
-- Azure OpenAI access (or modify for OpenAI/other providers)
-- Azure CLI installed and authenticated
+- **One of the following LLM providers:**
+  - Azure OpenAI (with Azure CLI)
+  - OpenRouter API key ([Get one here](https://openrouter.ai/keys))
+  - Direct OpenAI API key
+- **Optional:**
+  - Gmail account (for real email features)
+  - Google Cloud project (for Gmail API)
 
 ### Installation
 
@@ -74,32 +81,63 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. **Configure Azure credentials**
+4. **Configure environment**
 ```bash
-# Login to Azure CLI
-az login
+# Copy example environment file
+cp .env.example .env
 
-# Set your subscription (if needed)
-az account set --subscription "your-subscription-id"
+# Edit with your API keys and configuration
+nano .env  # or use your preferred editor
 ```
 
-5. **Update agent configurations**
+**Choose your LLM provider** (edit `.env`):
 
-Edit the `model` section in agent YAML files (`agents/*.yaml`) with your Azure OpenAI endpoint:
+- **Option A: OpenRouter** (Easiest for testing)
+  ```env
+  OPENROUTER_API_KEY=sk-or-v1-your-key-here
+  OPENROUTER_MODEL=openai/gpt-4-turbo
+  ```
 
-```yaml
-model:
-  endpoint: "https://your-azure-openai.openai.azure.com/"
-  deployment: "your-deployment-name"
-  credential_type: "azure_cli"
+- **Option B: Azure OpenAI**
+  ```bash
+  az login  # Authenticate Azure CLI
+  ```
+  ```env
+  AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
+  AZURE_OPENAI_DEPLOYMENT=gpt-4o
+  ```
+
+- **Option C: Direct OpenAI**
+  ```env
+  OPENAI_API_KEY=sk-your-key-here
+  OPENAI_MODEL=gpt-4-turbo-preview
+  ```
+
+5. **Optional: Enable Gmail Integration**
+
+See [Setup Guide - Gmail Section](docs/SETUP_GUIDE.md#gmail-api-setup) for detailed instructions.
+
+Quick setup:
+```env
+USE_REAL_EMAIL_API=true
+GMAIL_CREDENTIALS_FILE=credentials.json
+GMAIL_USER_EMAIL=your.email@gmail.com
 ```
 
 6. **Run the DevUI**
 ```bash
+# Using bun (recommended)
+bun run agent
+
+# Or using Python directly
 python run_devui.py
 ```
 
 Open http://localhost:8080 in your browser and start chatting with agents!
+
+**🚀 New to the project?** Check out the [Quick Start Guide](QUICK_START.md) (5 min setup!)
+
+**📚 For detailed setup instructions**, see the [Complete Setup Guide](docs/SETUP_GUIDE.md)
 
 ## 📁 Project Structure
 
@@ -111,7 +149,8 @@ agentic-ms/
 │   ├── weather_agent.yaml      # Weather assistant configuration
 │   ├── stock_agent.yaml        # Stock market assistant configuration
 │   ├── email_agent.yaml        # Email assistant configuration
-│   └── calendar_agent.yaml     # Calendar assistant configuration
+│   ├── calendar_agent.yaml     # Calendar assistant configuration
+│   └── general_openrouter_agent.yaml  # OpenRouter-powered agent (NEW)
 │
 ├── tools/                       # Tool library (auto-discovered)
 │   ├── _decorators.py          # @tool decorator for registration
@@ -131,7 +170,8 @@ agentic-ms/
 │   ├── email/                  # Email domain tools
 │   │   ├── send_email.py
 │   │   ├── read_inbox.py
-│   │   └── search_emails.py
+│   │   ├── search_emails.py
+│   │   └── gmail_utils.py      # Gmail API integration (NEW)
 │   │
 │   ├── calendar/               # Calendar domain tools
 │   │   ├── create_event.py
@@ -148,6 +188,7 @@ agentic-ms/
 │   ├── DYNAMIC_TOOL_ARCHITECTURE.md
 │   ├── AGENT_WORKFLOW_ARCHITECTURE.md
 │   ├── PARALLEL_EXECUTION_QUICKSTART.md
+│   ├── SETUP_GUIDE.md          # Complete setup guide (NEW)
 │   └── EMAIL_AGENT_DEMO.md
 │
 ├── demos/                       # Demo scripts
@@ -280,11 +321,21 @@ instructions: |
   2. Summarize key points clearly
   3. Provide source attribution
 
-# Model Configuration
+# Model Configuration - Multi-Provider with Automatic Fallback
 model:
+  # Provider list (will try in order until one succeeds)
+  providers:
+    - "openrouter"  # Try OpenRouter first (easiest, no auth issues)
+    - "azure"       # Fall back to Azure if available
+    - "openai"      # Fall back to OpenAI if available
+
+  # Azure configuration (used if azure provider succeeds)
   endpoint: "https://your-azure-openai.openai.azure.com/"
   deployment: "gpt-4o"
   credential_type: "azure_cli"
+
+  # OpenRouter/OpenAI config loaded from environment:
+  # OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENAI_API_KEY
 ```
 
 ### Step 2: Create Domain Tools (if needed)
@@ -492,6 +543,36 @@ The ToolRegistry maintains a central registry of all discovered tools:
 
 ## ⚙️ Configuration
 
+### Multi-Provider Support with Automatic Fallback
+
+All agents now support **automatic provider fallback** - if one provider fails (e.g., Azure auth issues), the system automatically tries the next provider in the list.
+
+**How it works:**
+1. Agent YAML specifies a list of providers to try
+2. System attempts each provider in order
+3. First successful provider is used
+4. If all fail, error is reported
+
+**Example configuration:**
+```yaml
+model:
+  providers:
+    - "openrouter"  # Try first (easiest, no Azure auth needed)
+    - "azure"       # Try second (if Azure CLI is authenticated)
+    - "openai"      # Try third (if OpenAI API key is set)
+```
+
+**Benefits:**
+- ✅ No more agent failures due to Azure auth issues
+- ✅ Seamless switching between providers
+- ✅ Development-friendly (OpenRouter) with production Azure support
+- ✅ Zero code changes needed
+
+**Supported Providers:**
+- **OpenRouter**: Access 100+ models via single API key
+- **Azure OpenAI**: Enterprise-grade Azure integration
+- **OpenAI**: Direct OpenAI API access
+
 ### Agent Configuration (YAML)
 
 ```yaml
@@ -512,10 +593,22 @@ exclude_tools:                        # Optional: Tools to exclude
 instructions: |                       # Required: Agent prompt
   Your instructions here...
 
-model:                                # Required: Model config
+# Model Configuration - Multi-Provider Support
+model:
+  # Provider list (tries in order until one succeeds)
+  providers:                          # Required: List of providers to try
+    - "openrouter"                    # Recommended first choice
+    - "azure"                         # Fallback to Azure
+    - "openai"                        # Fallback to OpenAI
+
+  # Azure OpenAI configuration
   endpoint: "https://..."             # Azure OpenAI endpoint
   deployment: "model-name"            # Deployment name
-  credential_type: "azure_cli"        # Credential type
+  credential_type: "azure_cli"        # azure_cli or api_key
+
+  # OpenRouter/OpenAI config (from environment)
+  # OPENROUTER_API_KEY, OPENROUTER_MODEL
+  # OPENAI_API_KEY, OPENAI_MODEL
 ```
 
 ### Environment Variables
@@ -523,13 +616,39 @@ model:                                # Required: Model config
 Create a `.env` file for API keys:
 
 ```bash
-# Azure OpenAI
+# ============================================================================
+# LLM Provider Configuration (choose one or all for automatic fallback)
+# ============================================================================
+
+# OpenRouter (Recommended for development - easiest setup)
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=openai/gpt-4o-mini
+OPENROUTER_APP_NAME=your-app-name
+
+# Azure OpenAI (Enterprise production use)
 AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
 AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+# Note: Also requires `az login` for azure_cli authentication
 
+# Direct OpenAI (Alternative to Azure)
+OPENAI_API_KEY=sk-your-key-here
+OPENAI_MODEL=gpt-4-turbo-preview
+
+# ============================================================================
 # Optional: Real API keys for tools
+# ============================================================================
 OPENWEATHER_API_KEY=your_key_here
 ALPHA_VANTAGE_API_KEY=your_key_here
+
+# ============================================================================
+# Gmail Integration (Optional)
+# ============================================================================
+USE_REAL_EMAIL_API=true
+GMAIL_CREDENTIALS_FILE=credentials.json
+GMAIL_TOKEN_FILE=token.json
+GMAIL_USER_EMAIL=your.email@gmail.com
 ```
 
 ### Tool Configuration

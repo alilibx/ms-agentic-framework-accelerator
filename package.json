@@ -1,27 +1,35 @@
 {
   "name": "agentic-ms",
   "version": "1.0.0",
-  "description": "Microsoft Agent Framework Weather Agent",
+  "description": "Multi-Agent System",
   "main": "run_devui.py",
   "scripts": {
     "dev": "./start_agent.sh",
     "agent": "./start_agent.sh",
-    "stop": "pkill -f 'python run_devui.py' && pkill -f 'uvicorn' && rm -f .agent.pid",
+    "start": "./start_agent.sh",
+    "stop": "pkill -f 'python run_devui.py' && pkill -f 'uvicorn' && rm -f .agent.pid || echo 'No agent running'",
     "restart": "bun run stop && sleep 2 && bun run agent",
     "status": "lsof -i :8080 || echo 'No agent running on port 8080'",
-    "workflow": "python workflow_runner.py",
-    "demo": "python workflow_runner.py"
+    "setup": "python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip && pip install --pre -r requirements.txt && echo '✅ Setup complete! Run: bun run agent'",
+    "install": "source .venv/bin/activate && pip install --pre -r requirements.txt",
+    "workflow": ".venv/bin/python workflow_runner.py",
+    "demo": ".venv/bin/python workflow_runner.py",
+    "clean": "rm -rf .venv __pycache__ **/__pycache__ .agent.pid",
+    "logs": "tail -f logs/*.log 2>/dev/null || echo 'No logs found'"
   },
   "keywords": [
     "agent",
-    "weather",
+    "multi-agent",
     "microsoft",
     "ai",
-    "azure"
+    "azure",
+    "openrouter",
+    "gmail",
+    "automation"
   ],
   "author": "Ali Alhashimi",
   "license": "MIT",
   "engines": {
-    "python": ">=3.10"
+    "python": ">=3.11"
   }
 }

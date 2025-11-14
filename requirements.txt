@@ -1,0 +1,95 @@
+# =============================================================================
+# Multi-Agent System - Python Dependencies
+# =============================================================================
+
+# Core agent framework (Microsoft Agent Framework)
+# Note: Framework is in preview, requires --pre flag
+# Install with: pip install agent-framework --pre
+agent-framework
+
+# Azure OpenAI integration
+azure-identity>=1.15.0
+azure-core>=1.29.0
+
+# OpenAI client (for OpenRouter and direct OpenAI)
+openai>=1.12.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# YAML configuration parsing
+pyyaml>=6.0.1
+
+# Gmail API integration (optional - for real email support)
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.116.0
+
+# HTTP client
+requests>=2.31.0
+
+# Data handling
+python-dateutil>=2.8.2
+
+# Logging and utilities
+colorama>=0.4.6
+
+# Type hints and annotations
+typing-extensions>=4.9.0
+
+# Web framework (if using FastAPI for DevUI)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Optional: Weather API
+# requests>=2.31.0  (already included above)
+
+# Optional: Stock market APIs
+# pandas>=2.1.4
+# numpy>=1.26.3
+
+# Optional: Calendar APIs
+# google-calendar-api>=0.1.0
+
+# Development dependencies (optional)
+# pytest>=7.4.4
+# pytest-asyncio>=0.23.3
+# black>=24.1.0
+# flake8>=7.0.0
+# mypy>=1.8.0
+
+# =============================================================================
+# Installation Instructions
+# =============================================================================
+#
+# Basic installation:
+#   pip install -r requirements.txt
+#
+# With development tools:
+#   pip install -r requirements.txt
+#   pip install pytest black flake8 mypy
+#
+# Minimal installation (no Gmail, no optional features):
+#   pip install azure-identity openai python-dotenv pyyaml requests
+#
+# =============================================================================
+# Notes
+# =============================================================================
+#
+# 1. Gmail API (optional):
+#    - Only needed if USE_REAL_EMAIL_API=true
+#    - Omit google-* packages if using mock email mode
+#
+# 2. OpenRouter:
+#    - Uses standard OpenAI client (already included)
+#    - No additional packages needed
+#
+# 3. Azure OpenAI:
+#    - Requires azure-identity for authentication
+#    - Can use Azure CLI auth (no additional setup)
+#
+# 4. Agent Framework:
+#    - Install from your organization's package or source
+#    - Contact your team for installation instructions
+#
+# =============================================================================
