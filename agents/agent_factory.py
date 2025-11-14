@@ -14,6 +14,7 @@ import yaml
 import logging
 import os
 from dotenv import load_dotenv
+from .tool_context import inject_tool_context
 
 # Load environment variables
 load_dotenv()
@@ -115,11 +116,19 @@ class AgentFactory:
         # Build model client
         chat_client = self._build_chat_client(config)
 
+        # Inject dynamic tool context into instructions
+        base_instructions = config["instructions"]
+        enhanced_instructions = inject_tool_context(
+            base_instructions,
+            tool_functions,
+            compact=config.get("compact_tool_context", False)
+        )
+
         # Create agent
         agent = ChatAgent(
             name=config["name"],
             description=config["description"],
-            instructions=config["instructions"],
+            instructions=enhanced_instructions,
             tools=tool_functions,
             chat_client=chat_client,
         )
