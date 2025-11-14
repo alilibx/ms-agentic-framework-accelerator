@@ -182,10 +182,12 @@ class AgentFactory:
     def _build_chat_client(self, config: dict):
         """Build the chat client from config.
 
-        Supports multiple providers:
+        Supports multiple providers with automatic fallback:
         - azure: Azure OpenAI (default)
         - openrouter: OpenRouter API
         - openai: Direct OpenAI API
+
+        If the primary provider fails, automatically falls back to available alternatives.
 
         Args:
             config: Parsed YAML configuration
@@ -194,18 +196,42 @@ class AgentFactory:
             Configured chat client
         """
         model_config = config.get("model", {})
-        provider = model_config.get("provider", "azure").lower()
 
-        logger.info(f"Building chat client for provider: {provider}")
+        # Get provider list (supports both single provider and fallback list)
+        providers = model_config.get("providers", [])
+        if not providers:
+            # Legacy support: single provider field
+            primary_provider = model_config.get("provider", "azure").lower()
+            providers = [primary_provider]
 
-        if provider == "azure":
-            return self._build_azure_client(model_config)
-        elif provider == "openrouter":
-            return self._build_openrouter_client(model_config)
-        elif provider == "openai":
-            return self._build_openai_client(model_config)
+        # Try each provider in order until one succeeds
+        last_error = None
+        for provider in providers:
+            try:
+                logger.info(f"Building chat client for provider: {provider}")
+
+                if provider == "azure":
+                    return self._build_azure_client(model_config)
+                elif provider == "openrouter":
+                    return self._build_openrouter_client(model_config)
+                elif provider == "openai":
+                    return self._build_openai_client(model_config)
+                else:
+                    logger.warning(f"Unsupported provider: {provider}, trying next...")
+                    continue
+
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Provider '{provider}' failed: {e}")
+                if len(providers) > 1:
+                    logger.info(f"Trying next provider...")
+                continue
+
+        # If all providers failed, raise the last error
+        if last_error:
+            raise last_error
         else:
-            raise ValueError(f"Unsupported provider: {provider}")
+            raise ValueError(f"No valid providers configured")
 
     def _build_azure_client(self, model_config: dict) -> AzureOpenAIChatClient:
         """Build Azure OpenAI chat client.

@@ -24,7 +24,7 @@ A dynamic, plugin-based multi-agent system built on Microsoft's Agent Framework 
 - **Sequential Workflows**: Chain agents in sequence for complex workflows
 - **Parallel Execution**: Run multiple agents concurrently with fan-out/fan-in patterns
 - **Custom Aggregators**: Combine parallel results with custom logic
-- **Multi-Provider LLM Support**: Azure OpenAI, OpenRouter, and direct OpenAI integration
+- **Multi-Provider LLM Support**: Azure OpenAI, OpenRouter, and direct OpenAI with automatic fallback
 
 ### Developer Experience
 - **DevUI Integration**: Built-in web interface for testing and debugging
@@ -321,11 +321,21 @@ instructions: |
   2. Summarize key points clearly
   3. Provide source attribution
 
-# Model Configuration
+# Model Configuration - Multi-Provider with Automatic Fallback
 model:
+  # Provider list (will try in order until one succeeds)
+  providers:
+    - "openrouter"  # Try OpenRouter first (easiest, no auth issues)
+    - "azure"       # Fall back to Azure if available
+    - "openai"      # Fall back to OpenAI if available
+
+  # Azure configuration (used if azure provider succeeds)
   endpoint: "https://your-azure-openai.openai.azure.com/"
   deployment: "gpt-4o"
   credential_type: "azure_cli"
+
+  # OpenRouter/OpenAI config loaded from environment:
+  # OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENAI_API_KEY
 ```
 
 ### Step 2: Create Domain Tools (if needed)
@@ -533,6 +543,36 @@ The ToolRegistry maintains a central registry of all discovered tools:
 
 ## ⚙️ Configuration
 
+### Multi-Provider Support with Automatic Fallback
+
+All agents now support **automatic provider fallback** - if one provider fails (e.g., Azure auth issues), the system automatically tries the next provider in the list.
+
+**How it works:**
+1. Agent YAML specifies a list of providers to try
+2. System attempts each provider in order
+3. First successful provider is used
+4. If all fail, error is reported
+
+**Example configuration:**
+```yaml
+model:
+  providers:
+    - "openrouter"  # Try first (easiest, no Azure auth needed)
+    - "azure"       # Try second (if Azure CLI is authenticated)
+    - "openai"      # Try third (if OpenAI API key is set)
+```
+
+**Benefits:**
+- ✅ No more agent failures due to Azure auth issues
+- ✅ Seamless switching between providers
+- ✅ Development-friendly (OpenRouter) with production Azure support
+- ✅ Zero code changes needed
+
+**Supported Providers:**
+- **OpenRouter**: Access 100+ models via single API key
+- **Azure OpenAI**: Enterprise-grade Azure integration
+- **OpenAI**: Direct OpenAI API access
+
 ### Agent Configuration (YAML)
 
 ```yaml
@@ -553,10 +593,22 @@ exclude_tools:                        # Optional: Tools to exclude
 instructions: |                       # Required: Agent prompt
   Your instructions here...
 
-model:                                # Required: Model config
+# Model Configuration - Multi-Provider Support
+model:
+  # Provider list (tries in order until one succeeds)
+  providers:                          # Required: List of providers to try
+    - "openrouter"                    # Recommended first choice
+    - "azure"                         # Fallback to Azure
+    - "openai"                        # Fallback to OpenAI
+
+  # Azure OpenAI configuration
   endpoint: "https://..."             # Azure OpenAI endpoint
   deployment: "model-name"            # Deployment name
-  credential_type: "azure_cli"        # Credential type
+  credential_type: "azure_cli"        # azure_cli or api_key
+
+  # OpenRouter/OpenAI config (from environment)
+  # OPENROUTER_API_KEY, OPENROUTER_MODEL
+  # OPENAI_API_KEY, OPENAI_MODEL
 ```
 
 ### Environment Variables
@@ -564,13 +616,39 @@ model:                                # Required: Model config
 Create a `.env` file for API keys:
 
 ```bash
-# Azure OpenAI
+# ============================================================================
+# LLM Provider Configuration (choose one or all for automatic fallback)
+# ============================================================================
+
+# OpenRouter (Recommended for development - easiest setup)
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=openai/gpt-4o-mini
+OPENROUTER_APP_NAME=your-app-name
+
+# Azure OpenAI (Enterprise production use)
 AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
 AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+# Note: Also requires `az login` for azure_cli authentication
 
+# Direct OpenAI (Alternative to Azure)
+OPENAI_API_KEY=sk-your-key-here
+OPENAI_MODEL=gpt-4-turbo-preview
+
+# ============================================================================
 # Optional: Real API keys for tools
+# ============================================================================
 OPENWEATHER_API_KEY=your_key_here
 ALPHA_VANTAGE_API_KEY=your_key_here
+
+# ============================================================================
+# Gmail Integration (Optional)
+# ============================================================================
+USE_REAL_EMAIL_API=true
+GMAIL_CREDENTIALS_FILE=credentials.json
+GMAIL_TOKEN_FILE=token.json
+GMAIL_USER_EMAIL=your.email@gmail.com
 ```
 
 ### Tool Configuration

@@ -39,10 +39,22 @@ instructions: |
   Be friendly and conversational in your responses.
 
 # Model Configuration
+# Supports multiple providers with automatic fallback
+# Tries providers in order: Azure → OpenRouter → OpenAI
 model:
+  # Provider list (will try in order until one succeeds)
+  providers:
+    - "openrouter"  # Try OpenRouter first (easiest, no auth issues)
+    - "azure"       # Fall back to Azure if available
+    - "openai"      # Fall back to OpenAI if available
+
+  # Azure configuration (used if azure provider succeeds)
   endpoint: "https://azure-openai-aueast.openai.azure.com/"
   deployment: "gpt-4o-moretpm"
   credential_type: "azure_cli"
+
+  # OpenRouter/OpenAI config loaded from environment:
+  # OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENAI_API_KEY
 
 # Optional: Use real APIs instead of mocks
 # use_real_apis: false
