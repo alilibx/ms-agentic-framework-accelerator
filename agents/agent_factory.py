@@ -49,6 +49,7 @@ class AgentFactory:
     def __init__(self):
         """Initialize the agent factory."""
         self.registry = self._ensure_tools_loaded()
+        self.agent_tools_map = {}  # Track tools for each agent
         logger.info("AgentFactory initialized")
 
     def _ensure_tools_loaded(self) -> ToolRegistry:
@@ -96,11 +97,13 @@ class AgentFactory:
             agent = factory.from_yaml("agents/weather_agent.yaml")
         """
         config_file = Path(config_path)
+        quiet_mode = os.getenv('AGENT_DISCOVERY_QUIET') == 'true'
 
         if not config_file.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-        logger.info(f"Loading agent from: {config_path}")
+        if not quiet_mode:
+            logger.info(f"Loading agent from: {config_path}")
 
         # Load YAML configuration
         with open(config_file) as f:
@@ -121,9 +124,14 @@ class AgentFactory:
             chat_client=chat_client,
         )
 
-        logger.info(
-            f"✅ Created agent '{config['name']}' with {len(tool_functions)} tools"
-        )
+        # Store tools for this agent (for discovery reporting)
+        agent_id = config_file.stem  # e.g., "weather_agent"
+        self.agent_tools_map[agent_id] = tool_functions
+
+        if not quiet_mode:
+            logger.info(
+                f"✅ Created agent '{config['name']}' with {len(tool_functions)} tools"
+            )
 
         return agent
 
@@ -136,12 +144,15 @@ class AgentFactory:
         Returns:
             List of tool functions to attach to agent
         """
+        quiet_mode = os.getenv('AGENT_DISCOVERY_QUIET') == 'true'
         tool_functions = []
         tool_count_by_source = {}
 
         # Get tools by domain
         for domain in config.get("tool_domains", []):
             domain_tools = self.registry.get_tools_by_domain(domain)
+            if not quiet_mode:
+                logger.info(f"Found {len(domain_tools)} tools for domain '{domain}'")
             for tool in domain_tools:
                 if tool["function"] not in tool_functions:
                     tool_functions.append(tool["function"])
@@ -169,13 +180,14 @@ class AgentFactory:
                 if getattr(func, "_tool_metadata", {}).get("name") not in excluded
             ]
             removed = original_count - len(tool_functions)
-            if removed > 0:
+            if removed > 0 and not quiet_mode:
                 logger.info(f"Excluded {removed} tools")
 
         # Log discovery results
-        logger.info(f"Tool discovery results:")
-        for source, count in tool_count_by_source.items():
-            logger.info(f"  - {count} tools from {source}")
+        if not quiet_mode:
+            logger.info(f"Tool discovery results:")
+            for source, count in tool_count_by_source.items():
+                logger.info(f"  - {count} tools from {source}")
 
         return tool_functions
 
@@ -205,10 +217,12 @@ class AgentFactory:
             providers = [primary_provider]
 
         # Try each provider in order until one succeeds
+        quiet_mode = os.getenv('AGENT_DISCOVERY_QUIET') == 'true'
         last_error = None
         for provider in providers:
             try:
-                logger.info(f"Building chat client for provider: {provider}")
+                if not quiet_mode:
+                    logger.info(f"Building chat client for provider: {provider}")
 
                 if provider == "azure":
                     return self._build_azure_client(model_config)
@@ -292,7 +306,9 @@ class AgentFactory:
             base_url=base_url,
         )
 
-        logger.info(f"OpenRouter client created with model: {model_id}")
+        quiet_mode = os.getenv('AGENT_DISCOVERY_QUIET') == 'true'
+        if not quiet_mode:
+            logger.info(f"OpenRouter client created with model: {model_id}")
 
         return client
 
@@ -372,21 +388,25 @@ class AgentFactory:
             agents = factory.discover_all_agents()
             # {'weather_agent': <ChatAgent>, 'stock_agent': <ChatAgent>, ...}
         """
+        quiet_mode = os.getenv('AGENT_DISCOVERY_QUIET') == 'true'
         configs = self.list_available_configs(configs_dir)
         agents = {}
 
-        logger.info(f"🔍 Discovering agents in {configs_dir}/")
+        if not quiet_mode:
+            logger.info(f"🔍 Discovering agents in {configs_dir}/")
 
         for config_name in configs:
             try:
                 config_path = Path(configs_dir) / f"{config_name}.yaml"
                 agent = self.from_yaml(config_path)
                 agents[config_name] = agent
-                logger.info(f"   ✅ {config_name}: {agent.name}")
+                if not quiet_mode:
+                    logger.info(f"   ✅ {config_name}: {agent.name}")
             except Exception as e:
                 logger.error(f"   ❌ {config_name}: Failed to load - {e}")
 
-        logger.info(f"📊 Discovered {len(agents)} agents")
+        if not quiet_mode:
+            logger.info(f"📊 Discovered {len(agents)} agents")
 
         return agents
 
