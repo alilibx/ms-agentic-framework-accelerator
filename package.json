@@ -4,9 +4,8 @@
   "description": "Multi-Agent System",
   "main": "run_devui.py",
   "scripts": {
-    "dev": "./start_agent.sh",
-    "agent": "./start_agent.sh",
-    "start": "./start_agent.sh",
+    "dev": "./scripts/start_agent.sh",
+    "agent": "./scripts/start_agent.sh",
     "stop": "pkill -f 'python run_devui.py' && pkill -f 'uvicorn' && rm -f .agent.pid || echo 'No agent running'",
     "restart": "bun run stop && sleep 2 && bun run agent",
     "status": "lsof -i :8080 || echo 'No agent running on port 8080'",
