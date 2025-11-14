@@ -4,6 +4,7 @@
   "description": "Microsoft Agent Framework Weather Agent",
   "main": "run_devui.py",
   "scripts": {
+    "dev": "./start_agent.sh",
     "agent": "./start_agent.sh",
     "stop": "pkill -f 'python run_devui.py' && pkill -f 'uvicorn' && rm -f .agent.pid",
     "restart": "bun run stop && sleep 2 && bun run agent",
@@ -18,7 +19,7 @@
     "ai",
     "azure"
   ],
-  "author": "Your Name",
+  "author": "Ali Alhashimi",
   "license": "MIT",
   "engines": {
     "python": ">=3.10"
