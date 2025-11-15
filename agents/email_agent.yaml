@@ -35,5 +35,8 @@ instructions: |
 
 # Model
 model:
-  provider: "openrouter"
-  model: "openai/gpt-4o-moretpm"
+  # Provider list (will try in order until one succeeds)
+  providers:
+    - "openrouter"  # Try OpenRouter first (easiest, no auth issues)
+    - "azure"       # Fall back to Azure if available
+    - "openai"  
