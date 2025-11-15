@@ -620,73 +620,73 @@ def search_articles(
 ┌─────────────────────────────────────────────────────────────────────┐
 │                 MS-AGENTIC FRAMEWORK ACCELERATOR                    │
 ├─────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                      AGENT LAYER (YAML)                      │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │  │
-│  │  │ Weather Agent│  │Calendar Agent│  │  Stock Agent │       │  │
-│  │  │   .yaml      │  │    .yaml     │  │    .yaml     │       │  │
-│  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │  │
-│  └─────────┼──────────────────┼──────────────────┼──────────────┘  │
-│            │                  │                  │                   │
-│  ┌─────────▼──────────────────▼──────────────────▼──────────────┐  │
-│  │              AGENT FACTORY (Dynamic Discovery)               │  │
-│  │  • YAML Parser      • Tool Discovery Integration             │  │
-│  │  • Chat Client      • Multi-Provider Fallback                │  │
-│  │  • Context Injector • Azure/OpenRouter/OpenAI Support        │  │
-│  └─────────┬────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                      AGENT LAYER (YAML)                      │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │   │
+│  │  │ Weather Agent│  │Calendar Agent│  │  Stock Agent │        │   │
+│  │  │   .yaml      │  │    .yaml     │  │    .yaml     │        │   │
+│  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘        │   │ 
+│  └─────────┼──────────────────┼──────────────────┼──────────────┘   │
+│            │                  │                  │                  │
+│  ┌─────────▼──────────────────▼──────────────────▼──────────────┐   │
+│  │              AGENT FACTORY (Dynamic Discovery)               │   │
+│  │  • YAML Parser      • Tool Discovery Integration             │   │ 
+│  │  • Chat Client      • Multi-Provider Fallback                │   │
+│  │  • Context Injector • Azure/OpenRouter/OpenAI Support        │   │ 
+│  └─────────┬────────────────────────────────────────────────────┘   │
 │            │                                                        │
-│  ┌─────────▼────────────────────────────────────────────────────┐  │
-│  │            TOOL REGISTRY & DISCOVERY ENGINE                  │  │
-│  │  ┌────────────────────────────────────────────────────┐     │  │
-│  │  │         Automatic Tool Discovery                   │     │  │
-│  │  │  • Recursive directory scanning                    │     │  │
-│  │  │  • @tool decorator detection                       │     │  │
-│  │  │  • Metadata extraction                             │     │  │
-│  │  │  • Dynamic registration                            │     │  │
-│  │  └────────────────────────────────────────────────────┘     │  │
-│  │                                                              │  │
-│  │  ┌────────────────────────────────────────────────────┐     │  │
-│  │  │         Tool Registry (Singleton)                  │     │  │
-│  │  │  • Domain filtering (weather, calendar, stock)     │     │  │
-│  │  │  • Tag filtering (forecast, event, price)          │     │  │
-│  │  │  • Metadata storage (docs, params, types)          │     │  │
-│  │  │  • Hot-reload support                              │     │  │
-│  │  └────────────────────────────────────────────────────┘     │  │
-│  └──────────────────────────┬───────────────────────────────────┘  │
+│  ┌─────────▼────────────────────────────────────────────────────┐   │
+│  │            TOOL REGISTRY & DISCOVERY ENGINE                  │   │
+│  │  ┌────────────────────────────────────────────────────┐      │   │
+│  │  │         Automatic Tool Discovery                   │      │   │
+│  │  │  • Recursive directory scanning                    │      │   │
+│  │  │  • @tool decorator detection                       │      │   │
+│  │  │  • Metadata extraction                             │      │   │
+│  │  │  • Dynamic registration                            │      │   │
+│  │  └────────────────────────────────────────────────────┘      │   │
+│  │                                                              │   │
+│  │  ┌────────────────────────────────────────────────────┐      │   │
+│  │  │         Tool Registry (Singleton)                  │      │   │
+│  │  │  • Domain filtering (weather, calendar, stock)     │      │   │
+│  │  │  • Tag filtering (forecast, event, price)          │      │   │
+│  │  │  • Metadata storage (docs, params, types)          │      │   │
+│  │  │  • Hot-reload support                              │      │   │
+│  │  └────────────────────────────────────────────────────┘      │   │
+│  └──────────────────────────┬───────────────────────────────────┘   │
 │                             │                                       │
-│  ┌──────────────────────────▼───────────────────────────────────┐  │
-│  │              TOOL DOMAINS (4 Active Domains)                 │  │
-│  │                                                               │  │
-│  │  ┌────────────┐  ┌────────────┐  ┌─────────┐  ┌──────────┐ │  │
-│  │  │  WEATHER   │  │  CALENDAR  │  │  STOCK  │  │  EMAIL   │ │  │
-│  │  │  Domain    │  │  Domain    │  │ Domain  │  │  Domain  │ │  │
-│  │  ├────────────┤  ├────────────┤  ├─────────┤  ├──────────┤ │  │
-│  │  │ current_   │  │ create_    │  │ stock_  │  │ send_    │ │  │
-│  │  │ weather    │  │ event      │  │ price   │  │ email    │ │  │
-│  │  │            │  │            │  │         │  │          │ │  │
-│  │  │ forecast   │  │ list_      │  │ stock_  │  │ read_    │ │  │
-│  │  │            │  │ events     │  │ analysis│  │ inbox    │ │  │
-│  │  │            │  │            │  │         │  │          │ │  │
-│  │  │            │  │ delete_    │  │ stock_  │  │ search_  │ │  │
-│  │  │            │  │ event      │  │ history │  │ emails   │ │  │
-│  │  │            │  │            │  │         │  │          │ │  │
-│  │  │            │  │ find_free_ │  │         │  │ organize │ │  │
-│  │  │            │  │ time       │  │         │  │ _email   │ │  │
-│  │  │            │  │            │  │         │  │          │ │  │
-│  │  │ (2 tools)  │  │ (4 tools)  │  │(3 tools)│  │ (4 tools)│ │  │
-│  │  └────────────┘  └────────────┘  └─────────┘  └──────────┘ │  │
-│  └───────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────▼───────────────────────────────────┐   │
+│  │              TOOL DOMAINS (4 Active Domains)                 │   │
+│  │                                                              │   │
+│  │  ┌────────────┐  ┌────────────┐  ┌─────────┐  ┌──────────┐   │   │
+│  │  │  WEATHER   │  │  CALENDAR  │  │  STOCK  │  │  EMAIL   │   │   │
+│  │  │  Domain    │  │  Domain    │  │ Domain  │  │  Domain  │   │   │
+│  │  ├────────────┤  ├────────────┤  ├─────────┤  ├──────────┤   │   │
+│  │  │ current_   │  │ create_    │  │ stock_  │  │ send_    │   │   │
+│  │  │ weather    │  │ event      │  │ price   │  │ email    │   │   │
+│  │  │            │  │            │  │         │  │          │   │   │
+│  │  │ forecast   │  │ list_      │  │ stock_  │  │ read_    │   │   │
+│  │  │            │  │ events     │  │ analysis│  │ inbox    │   │   │
+│  │  │            │  │            │  │         │  │          │   │   │
+│  │  │            │  │ delete_    │  │ stock_  │  │ search_  │   │   │
+│  │  │            │  │ event      │  │ history │  │ emails   │   │   │
+│  │  │            │  │            │  │         │  │          │   │   │
+│  │  │            │  │ find_free_ │  │         │  │ organize │   │   │
+│  │  │            │  │ time       │  │         │  │ _email   │   │   │
+│  │  │            │  │            │  │         │  │          │   │   │
+│  │  │ (2 tools)  │  │ (4 tools)  │  │(3 tools)│  │ (4 tools)│   │   │
+│  │  └────────────┘  └────────────┘  └─────────┘  └──────────┘   │   │
+│  └──────────────────────────────────────────────────────────────┘   │
 │                             │                                       │
-│  ┌──────────────────────────▼───────────────────────────────────┐  │
-│  │                 DEVUI & ORCHESTRATION                        │  │
-│  │  • Web-based UI for agent interaction                        │  │
-│  │  • Real-time tool discovery display                          │  │
-│  │  • Auto-startup agent loading                                │  │
-│  │  • Sequential & parallel workflow execution                  │  │
-│  │  • Live execution monitoring                                 │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                       │
+│  ┌──────────────────────────▼───────────────────────────────────┐   │
+│  │                 DEVUI & ORCHESTRATION                        │   │
+│  │  • Web-based UI for agent interaction                        │   │
+│  │  • Real-time tool discovery display                          │   │
+│  │  • Auto-startup agent loading                                │   │
+│  │  • Sequential & parallel workflow execution                  │   │
+│  │  • Live execution monitoring                                 │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
