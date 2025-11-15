@@ -1,4 +1,4 @@
-# Agentic Multi-Agent System
+# Microsoft's Agent Framework Accelerator
 
 A dynamic, plugin-based multi-agent system built on Microsoft's Agent Framework with automatic tool and agent discovery. Create powerful AI agents with just YAML configuration files - minimal code!
 
