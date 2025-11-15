@@ -1,6 +1,6 @@
 # Agentic Multi-Agent System
 
-A dynamic, plugin-based multi-agent system built on Microsoft's Agent Framework with automatic tool and agent discovery. Create powerful AI agents with just YAML configuration files - no code required!
+A dynamic, plugin-based multi-agent system built on Microsoft's Agent Framework with automatic tool and agent discovery. Create powerful AI agents with just YAML configuration files - minimal code!
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
