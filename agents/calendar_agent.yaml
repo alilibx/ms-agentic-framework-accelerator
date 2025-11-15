@@ -9,7 +9,6 @@ description: "A helpful calendar assistant that manages events, schedules, and a
 # The agent will automatically get ALL tools matching these criteria
 tool_domains:
   - calendar
-  - email
 
 tool_tags:
   - calendar

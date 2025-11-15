@@ -8,8 +8,6 @@ description: "A professional stock market assistant providing prices, analysis, 
 # Tool Discovery Configuration
 tool_domains:
   - stock
-  - weather
-  - email
 
 tool_tags:
   - stock
