@@ -5,40 +5,43 @@ from datetime import datetime
 from tools._decorators import tool
 import os
 
-# Try to import Gmail utilities
+# Try to import email utilities
 try:
-    from .gmail_utils import get_gmail_client, is_gmail_configured
+    from .gmail_utils import is_gmail_configured
+    from .account_manager import get_email_client, get_account_manager
     GMAIL_AVAILABLE = True
 except ImportError:
     GMAIL_AVAILABLE = False
     is_gmail_configured = lambda: False
 
 
-# Check if we should use real Gmail or mock
-USE_REAL_GMAIL = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
+# Check if we should use real email API or mock
+USE_REAL_EMAIL_API = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
 
 
 @tool(
     domain="email",
     description="Send an email to a recipient",
     tags=["email", "send", "compose", "outbox"],
-    mock=not USE_REAL_GMAIL,
+    mock=not USE_REAL_EMAIL_API,
 )
 def send_email(
     to: Annotated[str, "The recipient email address"],
     subject: Annotated[str, "The email subject line"],
     body: Annotated[str, "The email body content"],
     cc: Annotated[str, "CC recipients (optional)"] = "",
+    account_id: Annotated[str, "Email account to use (optional, uses default if not specified)"] = "",
 ) -> str:
     """Send an email to a recipient.
 
-    Supports both Gmail API (when configured) and mock mode.
+    Supports multiple email accounts (Gmail, Outlook) and mock mode.
 
     Args:
         to: Recipient email address
         subject: Email subject line
         body: Email body content
         cc: Optional CC recipients
+        account_id: Email account to use (optional, uses default if not specified)
 
     Returns:
         Formatted string confirming email was sent
@@ -50,16 +53,24 @@ def send_email(
         📝 Subject: Meeting
         ⏰ Sent: 2025-10-24 15:30:00"
     """
-    # Try real Gmail if configured
-    if USE_REAL_GMAIL and is_gmail_configured():
+    # Try real email API if configured
+    if USE_REAL_EMAIL_API:
         try:
-            gmail = get_gmail_client()
-            result_data = gmail.send_email(to, subject, body, cc or None)
+            # Get email client for the specified account
+            account_id_to_use = account_id if account_id else None
+            client = get_email_client(account_id_to_use)
+
+            # Get account info for display
+            manager = get_account_manager()
+            account = manager.get_account(account_id_to_use)
+
+            result_data = client.send_email(to, subject, body, cc or None)
 
             if result_data['success']:
                 result = f"""
-✅ **Email Sent Successfully!** (via Gmail)
+✅ **Email Sent Successfully!** (via {account.provider.title()})
 
+📧 **From:** {account.email}
 📧 **To:** {to}
 📝 **Subject:** {subject}
 💬 **Message:** {body[:100]}{'...' if len(body) > 100 else ''}
@@ -75,8 +86,8 @@ def send_email(
                 return f"❌ **Failed to send email:** {result_data.get('error', 'Unknown error')}"
 
         except Exception as e:
-            # Fall back to mock if Gmail fails
-            return f"⚠️ **Gmail error (using mock):** {str(e)}\n\n" + _send_email_mock(to, subject, body, cc)
+            # Fall back to mock if email API fails
+            return f"⚠️ **Email API error (using mock):** {str(e)}\n\n" + _send_email_mock(to, subject, body, cc)
 
     # Mock implementation
     return _send_email_mock(to, subject, body, cc)

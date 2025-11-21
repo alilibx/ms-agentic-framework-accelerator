@@ -6,35 +6,38 @@ import random
 import os
 from tools._decorators import tool
 
-# Try to import Gmail utilities
+# Try to import email utilities
 try:
-    from .gmail_utils import get_gmail_client, is_gmail_configured
+    from .gmail_utils import is_gmail_configured
+    from .account_manager import get_email_client, get_account_manager
     GMAIL_AVAILABLE = True
 except ImportError:
     GMAIL_AVAILABLE = False
     is_gmail_configured = lambda: False
 
-# Check if we should use real Gmail or mock
-USE_REAL_GMAIL = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
+# Check if we should use real email API or mock
+USE_REAL_EMAIL_API = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
 
 
 @tool(
     domain="email",
     description="Search emails by keyword, sender, or subject",
     tags=["email", "search", "find", "query"],
-    mock=not USE_REAL_GMAIL,
+    mock=not USE_REAL_EMAIL_API,
 )
 def search_emails(
     query: Annotated[str, "Search query (keywords, sender, or subject)"],
     search_in: Annotated[str, "Where to search: 'all', 'subject', 'from', 'body'"] = "all",
+    account_id: Annotated[str, "Email account to use (optional, uses default if not specified)"] = "",
 ) -> str:
     """Search emails by keyword, sender, or subject.
 
-    Supports both Gmail API (when configured) and mock mode.
+    Supports multiple email accounts (Gmail, Outlook) and mock mode.
 
     Args:
         query: Search query string
         search_in: Where to search - 'all', 'subject', 'from', 'body'
+        account_id: Email account to use (optional, uses default if not specified)
 
     Returns:
         Formatted string with search results
@@ -50,14 +53,21 @@ def search_emails(
            ⏰ Received: 2025-10-24 14:30
         ..."
     """
-    # Try real Gmail if configured
-    if USE_REAL_GMAIL and is_gmail_configured():
+    # Try real email API if configured
+    if USE_REAL_EMAIL_API:
         try:
-            gmail = get_gmail_client()
-            emails = gmail.search_emails(query=query, search_in=search_in, limit=20)
+            # Get email client for the specified account
+            account_id_to_use = account_id if account_id else None
+            client = get_email_client(account_id_to_use)
+
+            # Get account info for display
+            manager = get_account_manager()
+            account = manager.get_account(account_id_to_use)
+
+            emails = client.search_emails(query=query, search_in=search_in, limit=20)
 
             search_scope = f"in {search_in}" if search_in != "all" else "everywhere"
-            header = f"🔍 **Search Results for '{query}' {search_scope}** (via Gmail)\n"
+            header = f"🔍 **Search Results for '{query}' {search_scope}** ({account.email})\n"
 
             if not emails:
                 return header + "\n❌ No emails found matching your query."
@@ -82,8 +92,8 @@ def search_emails(
             return "\n\n".join(result_text)
 
         except Exception as e:
-            # Fall back to mock if Gmail fails
-            return f"⚠️ **Gmail error (using mock):** {str(e)}\n\n" + _search_emails_mock(query, search_in)
+            # Fall back to mock if email API fails
+            return f"⚠️ **Email API error (using mock):** {str(e)}\n\n" + _search_emails_mock(query, search_in)
 
     # Mock implementation
     return _search_emails_mock(query, search_in)

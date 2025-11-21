@@ -6,35 +6,38 @@ import random
 import os
 from tools._decorators import tool
 
-# Try to import Gmail utilities
+# Try to import email utilities
 try:
-    from .gmail_utils import get_gmail_client, is_gmail_configured
+    from .gmail_utils import is_gmail_configured
+    from .account_manager import get_email_client, get_account_manager
     GMAIL_AVAILABLE = True
 except ImportError:
     GMAIL_AVAILABLE = False
     is_gmail_configured = lambda: False
 
-# Check if we should use real Gmail or mock
-USE_REAL_GMAIL = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
+# Check if we should use real email API or mock
+USE_REAL_EMAIL_API = os.getenv("USE_REAL_EMAIL_API", "false").lower() == "true" and GMAIL_AVAILABLE
 
 
 @tool(
     domain="email",
     description="Read recent emails from inbox",
     tags=["email", "inbox", "read", "messages"],
-    mock=not USE_REAL_GMAIL,
+    mock=not USE_REAL_EMAIL_API,
 )
 def read_inbox(
     limit: Annotated[int, "Maximum number of emails to retrieve"] = 5,
     filter_unread: Annotated[bool, "Show only unread emails"] = False,
+    account_id: Annotated[str, "Email account to use (optional, uses default if not specified)"] = "",
 ) -> str:
     """Read recent emails from the inbox.
 
-    Supports both Gmail API (when configured) and mock mode.
+    Supports multiple email accounts (Gmail, Outlook) and mock mode.
 
     Args:
         limit: Maximum number of emails to retrieve (default: 5, max: 20)
         filter_unread: If True, show only unread emails
+        account_id: Email account to use (optional, uses default if not specified)
 
     Returns:
         Formatted string with inbox emails
@@ -52,16 +55,23 @@ def read_inbox(
            ⏰ Received: 2025-10-24 13:15
         ..."
     """
-    # Try real Gmail if configured
-    if USE_REAL_GMAIL and is_gmail_configured():
+    # Try real email API if configured
+    if USE_REAL_EMAIL_API:
         try:
-            gmail = get_gmail_client()
-            emails = gmail.read_inbox(limit=limit, filter_unread=filter_unread)
+            # Get email client for the specified account
+            account_id_to_use = account_id if account_id else None
+            client = get_email_client(account_id_to_use)
+
+            # Get account info for display
+            manager = get_account_manager()
+            account = manager.get_account(account_id_to_use)
+
+            emails = client.read_inbox(limit=limit, filter_unread=filter_unread)
 
             if not emails:
-                return "📭 **No emails found** matching your criteria."
+                return f"📭 **No emails found** in {account.email}."
 
-            header = "📬 **Unread Messages** (via Gmail)" if filter_unread else "📬 **Your Inbox** (via Gmail)"
+            header = f"📬 **Unread Messages** ({account.email})" if filter_unread else f"📬 **Your Inbox** ({account.email})"
             result = [f"{header} ({len(emails)} {'message' if len(emails) == 1 else 'messages'})\n"]
 
             for i, email in enumerate(emails, 1):
@@ -77,8 +87,8 @@ def read_inbox(
             return "\n\n".join(result)
 
         except Exception as e:
-            # Fall back to mock if Gmail fails
-            return f"⚠️ **Gmail error (using mock):** {str(e)}\n\n" + _read_inbox_mock(limit, filter_unread)
+            # Fall back to mock if email API fails
+            return f"⚠️ **Email API error (using mock):** {str(e)}\n\n" + _read_inbox_mock(limit, filter_unread)
 
     # Mock implementation
     return _read_inbox_mock(limit, filter_unread)
