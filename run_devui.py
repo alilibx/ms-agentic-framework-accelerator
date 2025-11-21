@@ -24,18 +24,20 @@ warnings = []
 workflows_available = []
 try:
     from workflows import (
-        financial_workflow,
-        simple_workflow,
-        enhanced_workflow,
+        sequential_workflow,
         parallel_workflow,
-        parallel_with_callback,
+        enhanced_sequential,
+        parallel_with_synthesis_workflow,
+        comprehensive_business_workflow,
+        multi_domain_parallel,
     )
     workflows_available = [
-        financial_workflow,
-        simple_workflow,
-        enhanced_workflow,
+        sequential_workflow,
         parallel_workflow,
-        parallel_with_callback,
+        enhanced_sequential,
+        parallel_with_synthesis_workflow,
+        comprehensive_business_workflow,
+        multi_domain_parallel,
     ]
 except Exception as e:
     warnings.append("Workflows not available (Azure credentials required)")

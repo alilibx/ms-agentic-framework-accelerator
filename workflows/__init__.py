@@ -2,34 +2,52 @@
 
 This package contains workflow orchestrations that combine
 multiple agents in different patterns (sequential, parallel, hybrid).
+
+The comprehensive_workflow module demonstrates 6 different workflow patterns:
+1. Sequential Execution
+2. Parallel Execution
+3. Sequential + Synthesis
+4. Parallel + Synthesis
+5. Comprehensive Business Workflow
+6. Multi-Domain Parallel
 """
 
-from .financial_workflow import (
-    workflow as financial_workflow,
-    market_analyzer,
-    weather_analyst,
-    investment_advisor,
-)
-
-from .reusable_workflows import (
-    simple_workflow,
-    enhanced_workflow,
+from .comprehensive_workflow import (
+    # Workflows
+    sequential_workflow,
     parallel_workflow,
-    parallel_with_callback,
+    enhanced_sequential,
+    parallel_with_synthesis_workflow,
+    comprehensive_business_workflow,
+    multi_domain_parallel,
+    # Agents
+    market_analyzer,
+    investment_advisor,
     synthesis_agent,
+    # Examples
+    example_sequential,
+    example_parallel,
+    example_synthesis,
+    example_comprehensive,
+    example_streaming,
 )
 
 __all__ = [
-    # Financial workflow and its agents
-    "financial_workflow",
-    "market_analyzer",
-    "weather_analyst",
-    "investment_advisor",
-    # Reusable workflows
-    "simple_workflow",
-    "enhanced_workflow",
+    # Workflows
+    "sequential_workflow",
     "parallel_workflow",
-    "parallel_with_callback",
+    "enhanced_sequential",
+    "parallel_with_synthesis_workflow",
+    "comprehensive_business_workflow",
+    "multi_domain_parallel",
     # Agents
+    "market_analyzer",
+    "investment_advisor",
     "synthesis_agent",
+    # Examples
+    "example_sequential",
+    "example_parallel",
+    "example_synthesis",
+    "example_comprehensive",
+    "example_streaming",
 ]

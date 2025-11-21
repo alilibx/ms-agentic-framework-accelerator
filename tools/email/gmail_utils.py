@@ -332,6 +332,227 @@ class GmailClient:
 
         return body
 
+    def get_or_create_label(self, label_name: str) -> str:
+        """Get existing label ID or create new label.
+
+        Args:
+            label_name: Name of the label
+
+        Returns:
+            Label ID
+        """
+        try:
+            # Get all labels
+            results = self.service.users().labels().list(userId='me').execute()
+            labels = results.get('labels', [])
+
+            # Check if label exists
+            for label in labels:
+                if label['name'].lower() == label_name.lower():
+                    return label['id']
+
+            # Create new label if it doesn't exist
+            label_object = {
+                'name': label_name,
+                'labelListVisibility': 'labelShow',
+                'messageListVisibility': 'show'
+            }
+            created_label = self.service.users().labels().create(
+                userId='me',
+                body=label_object
+            ).execute()
+
+            return created_label['id']
+
+        except HttpError as error:
+            raise Exception(f"Failed to get/create label: {error}")
+
+    def add_labels_to_message(
+        self,
+        message_id: str,
+        label_names: List[str]
+    ) -> Dict:
+        """Add labels to a message.
+
+        Args:
+            message_id: Message ID to label
+            label_names: List of label names to add
+
+        Returns:
+            Dictionary with operation result
+        """
+        try:
+            # Get or create label IDs
+            label_ids = [self.get_or_create_label(name) for name in label_names]
+
+            # Add labels to message
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'addLabelIds': label_ids}
+            ).execute()
+
+            return {
+                'success': True,
+                'message_id': message_id,
+                'labels_added': label_names,
+                'label_ids': label_ids
+            }
+
+        except HttpError as error:
+            return {
+                'success': False,
+                'error': str(error),
+                'message_id': message_id
+            }
+
+    def remove_labels_from_message(
+        self,
+        message_id: str,
+        label_names: List[str]
+    ) -> Dict:
+        """Remove labels from a message.
+
+        Args:
+            message_id: Message ID
+            label_names: List of label names to remove
+
+        Returns:
+            Dictionary with operation result
+        """
+        try:
+            # Get label IDs
+            label_ids = []
+            results = self.service.users().labels().list(userId='me').execute()
+            labels = results.get('labels', [])
+
+            for label_name in label_names:
+                for label in labels:
+                    if label['name'].lower() == label_name.lower():
+                        label_ids.append(label['id'])
+                        break
+
+            if not label_ids:
+                return {
+                    'success': False,
+                    'error': 'No matching labels found',
+                    'message_id': message_id
+                }
+
+            # Remove labels
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': label_ids}
+            ).execute()
+
+            return {
+                'success': True,
+                'message_id': message_id,
+                'labels_removed': label_names
+            }
+
+        except HttpError as error:
+            return {
+                'success': False,
+                'error': str(error),
+                'message_id': message_id
+            }
+
+    def create_filter(
+        self,
+        criteria: Dict,
+        actions: Dict
+    ) -> Dict:
+        """Create a Gmail filter.
+
+        Args:
+            criteria: Filter criteria (from, to, subject, query, etc.)
+            actions: Actions to perform (addLabelIds, removeLabelIds, etc.)
+
+        Returns:
+            Dictionary with filter creation result
+
+        Example:
+            criteria = {'from': 'boss@company.com'}
+            actions = {'addLabelIds': ['LABEL_123'], 'removeLabelIds': ['INBOX']}
+        """
+        try:
+            filter_content = {
+                'criteria': criteria,
+                'action': actions
+            }
+
+            result = self.service.users().settings().filters().create(
+                userId='me',
+                body=filter_content
+            ).execute()
+
+            return {
+                'success': True,
+                'filter_id': result.get('id'),
+                'criteria': criteria,
+                'actions': actions
+            }
+
+        except HttpError as error:
+            return {
+                'success': False,
+                'error': str(error)
+            }
+
+    def get_inbox_stats(self) -> Dict:
+        """Get inbox statistics.
+
+        Returns:
+            Dictionary with inbox stats
+        """
+        try:
+            # Get profile info
+            profile = self.service.users().getProfile(userId='me').execute()
+
+            # Get label info for detailed stats
+            labels = self.service.users().labels().list(userId='me').execute().get('labels', [])
+
+            # Build stats
+            stats = {
+                'total_messages': profile.get('messagesTotal', 0),
+                'total_threads': profile.get('threadsTotal', 0),
+                'email_address': profile.get('emailAddress', ''),
+            }
+
+            # Get counts for specific labels
+            for label in labels:
+                label_name = label.get('name', '')
+                if label_name in ['INBOX', 'UNREAD', 'SENT', 'DRAFT', 'SPAM', 'TRASH']:
+                    stats[label_name.lower()] = label.get('messagesTotal', 0)
+
+            # Query for additional stats
+            try:
+                # Count unread in inbox
+                unread_results = self.service.users().messages().list(
+                    userId='me',
+                    q='is:unread in:inbox',
+                    maxResults=1
+                ).execute()
+                stats['unread_inbox'] = unread_results.get('resultSizeEstimate', 0)
+
+                # Count important
+                important_results = self.service.users().messages().list(
+                    userId='me',
+                    q='is:important in:inbox',
+                    maxResults=1
+                ).execute()
+                stats['important'] = important_results.get('resultSizeEstimate', 0)
+
+            except:
+                pass  # Use default values if queries fail
+
+            return stats
+
+        except HttpError as error:
+            raise Exception(f"Failed to get inbox stats: {error}")
+
 
 def get_gmail_client() -> Optional[GmailClient]:
     """Get authenticated Gmail client.

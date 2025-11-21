@@ -4,6 +4,8 @@ description: "A helpful email assistant that can send, read, and search emails"
 # Tools
 tool_domains:
   - email
+  - weather
+  - calendar
 
 tool_tags:
   - email
